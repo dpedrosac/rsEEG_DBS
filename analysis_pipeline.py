@@ -183,8 +183,7 @@ def process_pipelineArtefacts(filtered_eeg, subj_ID, flag_check=FLAG_CHECK):
     prep_params = {
         "ref_chs": "eeg",
         "reref_chs": "eeg",
-        "line_freqs": np.arange(50, sfreq / 2, 50),
-        "montage": MONTAGE
+        "line_freqs": np.arange(50, 220 / 2, 50),
     }
 
     prep = PrepPipeline(raw_noDBS, prep_params, MONTAGE)
@@ -207,7 +206,6 @@ def process_pipelineArtefacts(filtered_eeg, subj_ID, flag_check=FLAG_CHECK):
     ica.fit(data_interpolated)
     # Plot components
     fig = plt.figure()
-    ica.plot_sources(data_interpolated)
     ica.plot_components()
     plt.show(block=False)  # Non-blocking show
 

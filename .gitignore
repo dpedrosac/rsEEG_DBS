@@ -1,0 +1,41 @@
+# Byte-compiled files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environment
+env/
+venv/
+.venv/
+
+# Distribution / packaging
+build/
+dist/
+*.egg-info/
+
+# Logs
+*.log
+*.out
+*.err
+
+# OS-specific files
+.DS_Store
+Thumbs.db
+
+# IDE-specific files
+.vscode/
+.idea/
+*.swp
+*.swo
+*.bak
+
+# Python notebook checkpoints
+.ipynb_checkpoints/
+
+# Ignore raw and results folders
+raw/
+results/
+
+# Environment files
+*.env
+.env.*
