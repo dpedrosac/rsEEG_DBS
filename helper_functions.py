@@ -17,6 +17,8 @@ class General:
     def default_folders(username):
         if username == 'dpedrosac':
             wdir = "/media/storage/rsEEG_DBS/"
+        elif username == 'nahuel':
+            wdir = "C:/Users/Nahuel/Desktop/rsEEG_DBS"
 
         save_dir = Path(wdir) / 'results'
         save_dir.mkdir(parents=True, exist_ok=True)  # create if it does not exist
