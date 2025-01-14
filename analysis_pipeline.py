@@ -175,50 +175,36 @@ def process_pipelineArtefacts(filtered_eeg, subj_ID, flag_check=FLAG_CHECK):
      >>> process_pipelineArtefacts(Path("subject1_processed.vhdr"), "subject1", flag_check=True)
      """
 
-    output_filename = save_dir / subj_ID / f"{filtered_eeg.stem}_cleanedArtefacts.vhdr"
-    if output_filename.exists(): # Check if the output file exists
-        logger.warning(f"Output file already exists: {output_filename}. Skipping...")
-        data_interpolated, sfreq = general.load_data(filename=output_filename)
+    output_filename = save_dir / subj_ID / f"{filtered_eeg.stem}_cleaned.vhdr"
+    input_filenam = save_dir / subj_ID / f"{filtered_eeg.stem}_processed.vhdr" # output from (process_pipelineDBS)
+    raw_noDBS, sfreq = general.load_data(filename=input_filenam)
 
-    else:
-        input_filename = save_dir / subj_ID / f"{filtered_eeg.stem}_processed.vhdr" # output from (process_pipelineDBS)
-        raw_noDBS, sfreq = general.load_data(filename=input_filename)
+    # Fit prep
+    prep_params = {
+        "ref_chs": "eeg",
+        "reref_chs": "eeg",
+        "line_freqs": np.arange(50, sfreq / 2, 50),
+        "montage": MONTAGE
+    }
 
-        # Fit prep
-        prep_params = {
-            "ref_chs": "eeg",
-            "reref_chs": "eeg",
-            "line_freqs": np.arange(50, sfreq / 2, 50),
-            "montage": MONTAGE
-        }
+    prep = PrepPipeline(raw_noDBS, prep_params, MONTAGE)
+    prep.fit()
 
-        prep = PrepPipeline(raw_noDBS, prep_params, MONTAGE)
-        prep.fit()
+    if flag_check:
+        matplotlib.use('TkAgg')
+        for title, proj in zip(["Raw", "Interpolated"], [raw_noDBS, prep.raw]):
+            with use_browser_backend("matplotlib"): # mne.viz toolbox
+                fig = proj.plot(n_channels=24)
+            # make room for title
+            fig.subplots_adjust(top=0.9)
+            fig.suptitle("{} data".format(title), size="xx-large", weight="bold")
 
-        if flag_check:
-            matplotlib.use('TkAgg')
-            for title, proj in zip(["Raw", "Interpolated"], [raw_noDBS, prep.raw]):
-                with use_browser_backend("matplotlib"): # mne.viz toolbox
-                    fig = proj.plot(n_channels=24)
-                # make room for title
-                fig.subplots_adjust(top=0.9)
-                fig.suptitle("{} data".format(title), size="xx-large", weight="bold")
-
-        data_interpolated = prep.raw
-        export.export_raw(fname=output_filename, raw=data_interpolated)  # mne toolbox
-
-    # Second part ICA and resampling of data to finalise preprocessing
-    output_filename = save_dir / subj_ID / f"{filtered_eeg.stem}_cleanedICA.vhdr"
-    if output_filename.exists(): # Check if the output file exists
-        logger.warning(f"Output file already exists: {output_filename}. Skipping...")
-        return
-
+    data_interpolated = prep.raw
     data_interpolated = data_interpolated.filter(l_freq=.75, h_freq=None)
-    # amount_variance_explain = .99
+    amount_variance_explain = .99
     ica_components = 40
-    ica = preprocessing.ICA(n_components=ica_components, random_state=84    , method='fastica', max_iter=800)
+    ica = preprocessing.ICA(n_components=ica_components, random_state=97, method='fastica', max_iter=800)
     ica.fit(data_interpolated)
-
     # Plot components
     fig = plt.figure()
     ica.plot_sources(data_interpolated)
@@ -248,11 +234,10 @@ def process_pipelineArtefacts(filtered_eeg, subj_ID, flag_check=FLAG_CHECK):
             print("Invalid response. Please type 'yes' or 'no'.")
             continue
 
-    if user_input is not None and user_input != 'None':
-        # At this point, user_input is confirmed
-        logger.info(f"Final confirmed components to remove: {user_input}")
-        ica.exclude = list(map(int, user_input.split(',')))  # Convert input to a list of integers
-        ica.apply(data_interpolated)
+    # At this point, user_input is confirmed
+    logger.info(f"Final confirmed components to remove: {user_input}")
+    ica.exclude = list(map(int, user_input.split(',')))  # Convert input to a list of integers
+    ica.apply(data_interpolated)
 
     # Set EEG reference and downsample data
     preprocessed_data = data_interpolated.copy().set_eeg_reference(ref_channels="average")
@@ -269,18 +254,14 @@ for subj in list_of_subjects:
         print(f"Directory does not exist: {subject_path}")
         continue
 
-    results_path = Path(wdir) / 'results' / subj
-    results_path.mkdir(parents=True, exist_ok=True)  # create if it does not exist
-
     # List files and filter for .vhdr files
     list_of_files = [f for f in os.listdir(subject_path) if f.endswith('.vhdr')]
 
     # Print filtered files
     print(f"Processing data for {subj}:")
 
-    for recording in list_of_files:
-        input_filename = subject_path / recording
+    input_filename = subject_path / list_of_files[1]
 
-        output_preprocessDBS = process_pipelineDBS(input_filename, subj)
-        output_preprocessArtefacts = process_pipelineArtefacts(input_filename, subj)
+    output_preprocessDBS = process_pipelineDBS(input_filename, subj)
+    output_preprocessArtefacts = process_pipelineArtefacts(input_filename, subj)
 
