@@ -183,7 +183,7 @@ def process_pipelineArtefacts(filtered_eeg, subj_ID, flag_check=FLAG_CHECK):
     prep_params = {
         "ref_chs": "eeg",
         "reref_chs": "eeg",
-        "line_freqs": np.arange(50, sfreq / 2, 50),
+        "line_freqs": np.arange(50, 200, 50),
         "montage": MONTAGE
     }
 
@@ -234,10 +234,10 @@ def process_pipelineArtefacts(filtered_eeg, subj_ID, flag_check=FLAG_CHECK):
             print("Invalid response. Please type 'yes' or 'no'.")
             continue
 
-    # At this point, user_input is confirmed
-    logger.info(f"Final confirmed components to remove: {user_input}")
-    ica.exclude = list(map(int, user_input.split(',')))  # Convert input to a list of integers
-    ica.apply(data_interpolated)
+    if user_input is not None and user_input != 'None':         # At this point, user_input is confirmed
+        logger.info(f"Final confirmed components to remove: {user_input}")
+        ica.exclude = list(map(int, user_input.split(',')))  # Convert input to a list of integers
+        ica.apply(data_interpolated)
 
     # Set EEG reference and downsample data
     preprocessed_data = data_interpolated.copy().set_eeg_reference(ref_channels="average")
