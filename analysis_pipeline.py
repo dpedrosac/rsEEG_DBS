@@ -254,14 +254,18 @@ for subj in list_of_subjects:
         print(f"Directory does not exist: {subject_path}")
         continue
 
-    # List files and filter for .vhdr files
-    list_of_files = [f for f in os.listdir(subject_path) if f.endswith('.vhdr')]
-
     # Print filtered files
     print(f"Processing data for {subj}:")
 
-    input_filename = subject_path / list_of_files[1]
+    results_path = Path(wdir) / 'results' / subj
+    results_path.mkdir(parents=True, exist_ok=True)  # create if it does not exist
 
-    output_preprocessDBS = process_pipelineDBS(input_filename, subj)
-    output_preprocessArtefacts = process_pipelineArtefacts(input_filename, subj)
+    # List files and filter for .vhdr files for this subject
+    list_of_files = [f for f in os.listdir(subject_path) if f.endswith('.vhdr')]
+
+    for recording in list_of_files:
+        input_filename = subject_path / recording
+
+        output_preprocessDBS = process_pipelineDBS(input_filename, subj)
+        output_preprocessArtefacts = process_pipelineArtefacts(input_filename, subj)
 
