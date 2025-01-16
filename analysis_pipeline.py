@@ -176,6 +176,10 @@ def process_pipelineArtefacts(filtered_eeg, subj_ID, flag_check=FLAG_CHECK):
      """
 
     output_filename = save_dir / subj_ID / f"{filtered_eeg.stem}_cleaned.vhdr"
+    if output_filename.exists(): # Check if the output file exists
+        logger.warning(f"Output file already exists: {output_filename}. Skipping...")
+        return  # Skip further processing for this file
+
     input_filenam = save_dir / subj_ID / f"{filtered_eeg.stem}_processed.vhdr" # output from (process_pipelineDBS)
     raw_noDBS, sfreq = general.load_data(filename=input_filenam)
 
@@ -183,7 +187,7 @@ def process_pipelineArtefacts(filtered_eeg, subj_ID, flag_check=FLAG_CHECK):
     prep_params = {
         "ref_chs": "eeg",
         "reref_chs": "eeg",
-        "line_freqs": np.arange(50, 200, 50),
+        "line_freqs": np.arange(50, 300 / 2, 50),
         "montage": MONTAGE
     }
 
@@ -242,9 +246,12 @@ def process_pipelineArtefacts(filtered_eeg, subj_ID, flag_check=FLAG_CHECK):
     # Set EEG reference and downsample data
     preprocessed_data = data_interpolated.copy().set_eeg_reference(ref_channels="average")
     preprocessed_data = preprocessed_data.resample(sfreq=220)
+    crop_factor = 4
+    preprocessed_data = preprocessed_data.crop(tmin=crop_factor,
+                                               tmax=preprocessed_data.times[preprocessed_data.n_times - 1] - crop_factor)
 
     # Save the processed data
-    export.export_raw(fname=output_filename, raw=preprocessed_data)
+    export.export_raw(fname=output_filename, raw=preprocessed_data, overwrite=True)
     logger.info(f"Processed data saved to {output_filename}")
 
 
