@@ -35,6 +35,7 @@ Thumbs.db
 # Ignore raw and results folders
 raw/
 results/
+sensor_data/
 
 # Environment files
 *.env

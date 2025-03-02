@@ -25,7 +25,7 @@ logging.basicConfig(
     level=logging.INFO,  # Set the minimum log level
     format="%(asctime)s - %(levelname)s - %(message)s",  # Log format
     handlers=[
-        logging.FileHandler("test/pipeline.log"),  # Log to a file
+        logging.FileHandler("test/pipeline1.log"),  # Log to a file
         logging.StreamHandler()  # Log to the console
     ]
 )
@@ -81,7 +81,7 @@ def process_pipelineDBS(unprocessed_eed, subj_ID, flag_check=FLAG_CHECK, hpf=HPF
 
     try:
         logger.info(f"Loading data from {unprocessed_eed}")
-        raw_eeg, sfreq = general.load_data(filename=unprocessed_eed)
+        raw_eeg, sfreq = general.load_data_brainvision(filename=unprocessed_eed)
     except FileNotFoundError:
         logger.warning(f"Error: Input file {unprocessed_eed} not found.")
         return
@@ -181,7 +181,7 @@ def process_pipelineArtefacts(filtered_eeg, subj_ID, flag_check=FLAG_CHECK):
         return  # Skip further processing for this file
 
     input_filenam = save_dir / subj_ID / f"{filtered_eeg.stem}_processed.vhdr" # output from (process_pipelineDBS)
-    raw_noDBS, sfreq = general.load_data(filename=input_filenam)
+    raw_noDBS, sfreq = general.load_data_brainvision(filename=input_filenam)
 
     # Fit prep
     prep_params = {

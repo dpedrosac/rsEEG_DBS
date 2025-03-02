@@ -26,7 +26,7 @@ class General:
         return wdir, save_dir
 
     @staticmethod
-    def list_subjects(wdir):
+    def list_subjects(wdir, subfolder="raw"):
         """
         Returns a list of folder names in the 'raw' directory of the specified working directory.
 
@@ -40,13 +40,13 @@ class General:
         list
             A list of folder names (last layer) in the 'raw' directory.
         """
-        raw_dir = Path(wdir) / "raw"
+        raw_dir = Path(wdir) / subfolder
         list_of_subjects = [f.name for f in raw_dir.iterdir() if f.is_dir()]
 
         return list_of_subjects
 
     @staticmethod
-    def load_data(filename, montage=MONTAGE):
+    def load_data_brainvision(filename, montage=MONTAGE):
         raw_eeg = mne.io.read_raw_brainvision(filename, preload=True)  # Load BrainVision data
         raw_eeg.set_channel_types({'EKG': 'misc',
                                    'AccX': 'misc',
@@ -60,6 +60,24 @@ class General:
         sample_freq = raw_eeg.info["sfreq"]
 
         return raw_eeg, sample_freq
+
+    @staticmethod
+    def load_data_processed(filename, montage= MONTAGE):
+        # TODO: is a different format helpful/needed here?
+        return
+
+    @staticmethod
+    def load_pkl_csv(filename):
+        import pandas as pd
+
+        df_data = pd.read_pickle(filename)
+        df_data = np.vstack(df_data[-1])
+        column_names = ['x', 'y', 'z']
+        df_data = pd.DataFrame(df_data, columns=column_names)
+
+        return df_data
+
+
 
     @staticmethod
     def compute_fft(data_array: object,
