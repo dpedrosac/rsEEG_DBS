@@ -1,13 +1,23 @@
 import mne
 import numpy as np
 import logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-# import matplotlib.pyplot as plt
 from pathlib import Path
 
 MONTAGE = mne.channels.make_standard_montage('standard_1005')
 FLAG_CHECK = False
 SCALE_FACTOR = 2
+
+# Setup logging
+logging.basicConfig(
+    level=logging.INFO,  # Set the minimum log level
+    format="%(asctime)s - %(levelname)s - %(message)s",  # Log format
+    handlers=[
+        logging.FileHandler("test/pipeline1.log"),  # Log to a file
+        logging.StreamHandler()  # Log to the console
+    ]
+)
+
+logger = logging.getLogger(__name__)  # Create a logger instance
 
 class General:
     def __init__(self, _flag_check=False):
@@ -48,7 +58,8 @@ class General:
     @staticmethod
     def load_data_brainvision(filename, montage=MONTAGE):
         raw_eeg = mne.io.read_raw_brainvision(filename, preload=True)  # Load BrainVision data
-        raw_eeg.set_channel_types({'EKG': 'misc',
+        try:
+            raw_eeg.set_channel_types({'EKG': 'misc',
                                    'AccX': 'misc',
                                    'AccY': 'misc',
                                    'AccZ': 'misc',
@@ -56,6 +67,16 @@ class General:
                                    'EMG': 'emg',
                                    'O9': 'misc',
                                    'O10': 'misc'})
+        except ValueError:
+            raw_eeg.set_channel_types({'EKG': 'misc',
+                                       'AccX': 'misc',
+                                       'AccY': 'misc',
+                                       'AccZ': 'misc',
+                                       'SC': 'misc',
+                                       'EMG': 'emg',
+                                       'O9': 'misc',
+                                       'O10': 'misc'})
+
         raw_eeg.set_montage(montage)
         sample_freq = raw_eeg.info["sfreq"]
 
@@ -65,6 +86,19 @@ class General:
     def load_data_processed(filename, montage= MONTAGE):
         # TODO: is a different format helpful/needed here?
         return
+
+    @staticmethod
+    def check_file_existence(file_path, process_func, *args, **kwargs):
+        """
+        Helper function to check file existence before processing.
+        If file doesn't exist, process_func is executed.
+        """
+
+        if file_path.exists():
+            logger.info(f"File already exists: {file_path}. Skipping processing.")
+            return None
+        logger.warning(f"File {file_path} not found. Running processing function...")
+        return process_func(*args, **kwargs)
 
     @staticmethod
     def load_pkl_csv(filename):

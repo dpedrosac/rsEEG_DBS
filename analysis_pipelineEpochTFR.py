@@ -23,7 +23,7 @@ logging.basicConfig(
     level=logging.INFO,  # Set the minimum log level
     format="%(asctime)s - %(levelname)s - %(message)s",  # Log format
     handlers=[
-        logging.FileHandler("test/pipeline1.log"),  # Log to a file
+        logging.FileHandler("logs/pipelineEpochedTFR.log"),  # Log to a file
         logging.StreamHandler()  # Log to the console
     ]
 )
@@ -37,53 +37,60 @@ FLAG_CHECK=False
 
 def process_pipelineEpochTFR(cleaned_eeg, subj_ID, flag_check=FLAG_CHECK, duration=DURATION, method='multitaper',
                              freq_spacing='lin', time_window_length=.5, freqs=[3, 90, 50], freq_bandwidth=4):
+
     """
-        Processes EEG data for a given subject and input file.
+    Process EEG data by epoching and performing TFR (Time-Frequency Representation) analysis.
 
-        This function loads processed EEG data (cf. analysis_pipeline.py for more details, epochs it to the desired
-        duration and performs TFR analysis for further steps. All processed data is saved to a new file.
+    This function loads cleaned EEG data, segments it into fixed-length epochs,
+    and applies TFR analysis using the specified method. The processed data
+    is saved for later use.
 
-        Parameters
-        ----------
-        input_filename : Path
-            Path to the input `.vhdr` file.
-        subj : str
-            Subject identifier (e.g., "rsEEG_15").
-        flag_check : bool, optional
-            Whether to enable debugging checks and plots. Default is False.
-        duration : float, optional
-            duration of resulting epochs (non-overlapping).
-        method : str, optional
-            method used to estimate EEGs TFR.
-        freq_spacing : str, optional
-            spacing of frequencies either linearly or logarithmic
-        time_window_length : float, optional
-            time window to estimate the cycles in the script
-        freqs : float
-            frqeuncies on which the TFR will be estimated at
+    Parameters
+    ----------
+    cleaned_eeg : Path
+        Path to the cleaned EEG `.vhdr` file.
+    subj_ID : str
+        Subject identifier (e.g., "rsEEG_15").
+    flag_check : bool, optional
+        If True, enables debugging plots. Default is False.
+    duration : float, optional
+        Length of each epoch in seconds (non-overlapping). Default is 4s.
+    method : str, optional
+        TFR estimation method (e.g., "multitaper"). Default is "multitaper".
+    freq_spacing : str, optional
+        Frequency spacing type: "lin" (linear) or "log" (logarithmic). Default is "lin".
+    time_window_length : float, optional
+        Time window length used to estimate cycles. Default is 0.5s.
+    freqs : list of float
+        Frequency range for TFR analysis [low, high, steps].
+    freq_bandwidth : float, optional
+        Bandwidth parameter for TFR computation. Default is 4.
 
-        Returns
-        -------
-        No return
+    Returns
+    -------
+    None
+        Processed files are saved under the `save_dir` directory.
 
-        Examples
-        --------
-        >>> from pathlib import Path
-        >>> process_pipelineEpochTFR(Path("subject1.vhdr"), "subject1", flag_check=True, duration=4, method="multitaper")
+    Examples
+    --------
+    >>> from pathlib import Path
+    >>> process_pipelineEpochTFR(Path("subject1_cleaned.vhdr"), "subject1", flag_check=True)
 
-        Notes
-        -----
-        - The input file must be in BrainVision format.
-        - Processed files are saved under the `save_dir` folder.
-        """
+    Notes
+    -----
+    - The input file must be in BrainVision format.
+    - Processed data is saved in `.fif` format in the subject's results folder.
+    """
 
     output_filenameEpochs = save_dir / subj_ID / f"{cleaned_eeg.stem}_epo.fif"
     if not output_filenameEpochs.exists(): # Check if the output file does not exist, otherwise epoch data
-        logger.warning(f"File inexistent: {output_filenameEpochs}. Re-running analysis...")
-        logger.info(f"Epoching data to chunks of: {duration} secs. duration")
+        logger.warning(f"File {output_filenameEpochs} not found. Re-running analysis (Epochs of {duration}s)...")
         logger.info(f"\tLoading data from {cleaned_eeg}")
         raw_eeg, _ = general.load_data_brainvision(filename=cleaned_eeg)
-        epoched_rsdata = make_fixed_length_epochs(raw_eeg, duration=duration, preload=False)
+        epoched_rsdata = make_fixed_length_epochs(
+            raw_eeg,
+            duration=duration,
+            preload=False)
 
         if flag_check:
             logger.debug("Plotting example data for debugging")
@@ -95,20 +102,27 @@ def process_pipelineEpochTFR(cleaned_eeg, subj_ID, flag_check=FLAG_CHECK, durati
 
     output_filenameTFR = save_dir / subj_ID / f"{cleaned_eeg.stem}_TFR.fif"
     if not output_filenameTFR.exists():  # Check if the output file exists
-        logger.warning(f"File inexistent: {output_filenameTFR}. Re-running TFR analysis...")
-        logger.info(f"Running TFR analysis with {method} method")
-        logger.info(f"\tLoading data from {cleaned_eeg}")
+        logger.warning(f"TFR file {output_filenameTFR} not found. Running {method} TFR analysis on {cleaned_eeg}...")
 
         # define hyperparameters
-        if freq_spacing == 'lin':
-            freq = np.linspace(*freqs)
-        elif freq_spacing == 'log': # TODO: not working fior the time being
-            freq = np.logspace(*np.log10(freqs[:2]), freqs[2])
+        freq_methods = {
+            'lin': np.linspace,
+            'log': lambda freqs: np.logspace(*np.log10(freqs[:2]), freqs[2])
+        }
+        freq = freq_methods.get(freq_spacing, np.linspace)(*freqs)  # Default to 'lin' if invalid
+
         n_cycles = freq * time_window_length  # set n_cycles based on fixed time window length
         time_bandwidth = time_window_length * freq_bandwidth  # must be >= 2
 
-        tfr_epoched = epoched_rsdata.compute_tfr(method=method, freqs=freq, n_cycles=n_cycles,
-                                                 time_bandwidth=time_bandwidth, average=True, return_itc=False)  # tfr of epoched data
+        tfr_epoched = epoched_rsdata.compute_tfr(
+            method=method,
+            freqs=freq,
+            n_cycles=n_cycles,
+            time_bandwidth=time_bandwidth,
+            average=True,
+            return_itc=False
+        )
+
         mne.time_frequency.write_tfrs(fname=output_filenameTFR, tfr=tfr_epoched)
         logger.info(f"\tEpoching data and TFR analyses completed for subj: {subj_ID}")
     else:
