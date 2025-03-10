@@ -11,12 +11,13 @@ import numpy as np
 import matplotlib
 matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
+from autoreject import AutoReject
+ar = AutoReject()
 
 # Helper Functions (Project-Specific)
 from helper_functions import General, DBSfilt, MONTAGE
 
 general = General() # load helper functions needed in the script
-dbsfilter = DBSfilt()
 
 # Setup logging
 logging.basicConfig(
@@ -90,13 +91,15 @@ def process_pipelineEpochTFR(cleaned_eeg, subj_ID, flag_check=FLAG_CHECK, durati
         epoched_rsdata = make_fixed_length_epochs(
             raw_eeg,
             duration=duration,
-            preload=False)
+            preload=True)
 
         if flag_check:
             logger.debug("Plotting example data for debugging")
             epoched_rsdata.plot_image(picks=["C3"])
-        epoched_rsdata.set_montage(MONTAGE)
-        epoched_rsdata.save(fname=output_filenameEpochs)
+
+        epoched_rsdata_clean, log = ar.fit_transform(epoched_rsdata, return_log=True)
+        epoched_rsdata_clean.set_montage(MONTAGE)
+        epoched_rsdata_clean.save(fname=output_filenameEpochs)
     else:
         epoched_rsdata = mne.read_epochs(output_filenameEpochs)
 
