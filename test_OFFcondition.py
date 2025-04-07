@@ -35,7 +35,7 @@ list_of_subjects = general.list_subjects(wdir, subfolder="results")
 DURATION, NYQUIST = 4,125
 FLAG_CHECK=False
 
-list_off_conditions_dict = { 'rsEEG_01': 'DBS_Rest_17_cleaned_TFR.fif',
+list_off_conditions_dict = { 'rsEEG_01': 'DBS_Rest_1_cleaned_TFR.fif',
                              'rsEEG_04': 'Rest_Off_cleaned_TFR.fif',
                              'rsEEG_06': 'Rest_cleaned_TFR.fif',
                              'rsEEG_13': 'DBS_13_rest2_cleaned_TFR.fif',
@@ -65,7 +65,18 @@ for subj in list_of_subjects:
     if not filename_temp.exists():  # Check if the output file exists
         continue
 
-    listTFR.append(mne.time_frequency.read_tfrs(filename_temp))
+    fig, axes = plt.subplots(1, 2, figsize=(7, 4), layout="constrained")
+    fig.suptitle('Subj: {}'.format(subj), fontsize=16)
+    topomap_kw = dict(
+        ch_type="eeg", tmin=0.5, tmax=1.5, baseline=(0, 0.5), mode="logratio", show=False
+    )
+    plot_dict = dict(Theta=dict(fmin=30, fmax=45), Beta=dict(fmin=13, fmax=30))
+    for ax, (title, fmin_fmax) in zip(axes, plot_dict.items()):
+        mne.time_frequency.read_tfrs(filename_temp).plot_topomap(**fmin_fmax, axes=ax, **topomap_kw)
+        ax.set_title(title)
+    plt.show()
+
+    #listTFR.append(mne.time_frequency.read_tfrs(filename_temp))
 
 power = mne.grand_average(listTFR)
 power.plot_topo(baseline=(0, 0.5), mode="percent", title="Average power")

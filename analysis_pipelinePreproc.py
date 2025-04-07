@@ -38,7 +38,7 @@ LPF, HPF = 1,90
 FLAG_CHECK=False
 
 
-def process_pipelineDBS(unprocessed_eed, subj_ID, flag_check=FLAG_CHECK, hpf=HPF, lpf=LPF):
+def process_pipelineDBS(unprocessed_eeg, subj_ID, flag_check=FLAG_CHECK, hpf=HPF, lpf=LPF):
     """
     Processes EEG data for a given subject and input file.
 
@@ -74,16 +74,16 @@ def process_pipelineDBS(unprocessed_eed, subj_ID, flag_check=FLAG_CHECK, hpf=HPF
     - Processed files are saved under the `save_dir` folder.
     """
 
-    output_filename = save_dir / subj_ID / f"{unprocessed_eed.stem}_processed.vhdr"
+    output_filename = save_dir / subj_ID / f"{unprocessed_eeg.stem}_processed.vhdr"
     if output_filename.exists(): # Check if the output file exists
         logger.warning(f"Output file already exists: {output_filename}. Skipping...")
         return  # Skip further processing for this file
 
     try:
-        logger.info(f"Loading data from {unprocessed_eed}")
-        raw_eeg, sfreq = general.load_data_brainvision(filename=unprocessed_eed)
+        logger.info(f"Loading data from {unprocessed_eeg}")
+        raw_eeg, sfreq = general.load_data_brainvision(filename=unprocessed_eeg)
     except FileNotFoundError:
-        logger.warning(f"Error: Input file {unprocessed_eed} not found.")
+        logger.warning(f"Error: Input file {unprocessed_eeg} not found.")
         return
 
     logger.info(f"Applying filter: lpf={lpf}, hpf={hpf}")
@@ -115,7 +115,7 @@ def process_pipelineDBS(unprocessed_eed, subj_ID, flag_check=FLAG_CHECK, hpf=HPF
     raw_filtered.compute_psd(fmin=0, fmax=250, n_fft=2048, picks='eeg').plot(axes=axes[0])
     raw_eeg_processed.compute_psd(fmin=0, fmax=250, n_fft=2048, picks='eeg').plot(axes=axes[1])
 
-    fig.suptitle(f"PSD Comparison: {unprocessed_eed.stem}", fontsize=16)
+    fig.suptitle(f"PSD Comparison: {unprocessed_eeg.stem}", fontsize=16)
     ymin_total = min([
     value for pair in [axes[0].get_ylim(),axes[1].get_ylim()] for value in pair
     ])
@@ -136,9 +136,9 @@ def process_pipelineDBS(unprocessed_eed, subj_ID, flag_check=FLAG_CHECK, hpf=HPF
 
     # Ask user for confirmation
     logger.info("Prompting user for confirmation on data accuracy")
-    user_input = input(f"Is the processed data for {unprocessed_eed.stem} accurate? (yes/no): ").strip().lower()
+    user_input = input(f"Is the processed data for {unprocessed_eeg.stem} accurate? (yes/no): ").strip().lower()
     if user_input != 'yes':
-        logger.warning(f"User rejected processed data for {unprocessed_eed.stem}. Skipping save.")
+        logger.warning(f"User rejected processed data for {unprocessed_eeg.stem}. Skipping save.")
         return
     else:
         export.export_raw(fname=output_filename, raw=raw_eeg_processed) # mne toolbox
